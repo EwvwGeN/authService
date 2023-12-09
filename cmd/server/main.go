@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 
-	"github.com/EwvwGeN/authService/internal/config"
+	c "github.com/EwvwGeN/authService/internal/config"
+	l "github.com/EwvwGeN/authService/internal/logger"
 )
 
 var (
@@ -17,6 +19,10 @@ func init() {
 
 func main() {
 	flag.Parse()
-	c, e := config.LoadConfig(configPath)
-	fmt.Printf("%v         %v", c, e)
+	cfg, err := c.LoadConfig(configPath)
+	if err != nil {
+		panic(fmt.Sprintf("Cant load config from path %s", configPath ))
+	}
+	logger := l.SetupLogger(cfg.LogLevel)
+	logger.Debug("Config loaded", slog.Any("cfg", cfg))
 }
