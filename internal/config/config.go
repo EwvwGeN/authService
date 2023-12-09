@@ -1,17 +1,19 @@
 package config
 
-import "github.com/spf13/viper"
+import (
+	"github.com/spf13/viper"
+)
 
 type Config struct {
-	Test string `mapstructure:"Test"`
+	LogLevel string `mapstructure:"log_level"`
 }
 
 func LoadConfig(path string) (*Config, error) {
 	viper.AutomaticEnv()
 	if path != "" {
 		viper.AddConfigPath(path)
-		viper.SetConfigName("")
-		viper.SetConfigType("env")
+		viper.SetConfigName("config")
+		viper.SetConfigType("yaml")
 		err := viper.ReadInConfig()
 		if err != nil {
 			return nil, err
