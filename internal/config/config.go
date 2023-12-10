@@ -6,6 +6,7 @@ import (
 
 type Config struct {
 	LogLevel string `mapstructure:"log_level"`
+	Port int `mapstructure:"port"`
 }
 
 func LoadConfig(path string) (*Config, error) {
