@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net"
 
+	"github.com/EwvwGeN/authService/internal/config"
 	"github.com/EwvwGeN/authService/internal/grpcHandler"
 	"google.golang.org/grpc"
 )
@@ -17,11 +18,12 @@ type Server struct {
 
 func NewSerever(
 	log *slog.Logger,
+	validator config.Validator,
 	port int,
 ) *Server {
 	grpcS := grpc.NewServer()
 
-	grpcHandler.Register(grpcS)
+	grpcHandler.Register(grpcS, validator, log)
 
 	return &Server{
 		log: log,
