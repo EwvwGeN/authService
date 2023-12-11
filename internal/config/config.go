@@ -7,6 +7,7 @@ import (
 type Config struct {
 	LogLevel string `mapstructure:"log_level"`
 	Port int `mapstructure:"port"`
+	Validator Validator `mapstructure:"validator"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -25,5 +26,6 @@ func LoadConfig(path string) (*Config, error) {
 	if err != nil {
         return nil, err
     }
+	config.Validator.mustBeRegex()
 	return &config, nil
 }

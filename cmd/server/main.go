@@ -30,7 +30,7 @@ func main() {
 	logger := l.SetupLogger(cfg.LogLevel)
 	logger.Debug("Config loaded", slog.Any("cfg", cfg))
 
-	application := app.NewSerever(logger, cfg.Port)
+	application := app.NewSerever(logger, cfg.Validator, cfg.Port)
 	go application.GRPCRun()
 
 	stopChecker := make(chan os.Signal, 1)
