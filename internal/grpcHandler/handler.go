@@ -2,7 +2,6 @@ package grpcHandler
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	c "github.com/EwvwGeN/authService/internal/config"
@@ -16,7 +15,23 @@ import (
 type Server struct {
 	log *slog.Logger
 	validator c.Validator
+	auth Auth
 	authProto.UnimplementedAuthServer
+}
+
+type Auth interface {
+	Login(ctx context.Context,
+		email string,
+		password string,
+		appId string,
+	) (token string, err error)
+	RegisterNewUser(ctx context.Context,
+		email string,
+		password string,
+	) (userId string, err error)
+	IsAdmin(ctx context.Context,
+	userId string,
+	) (bool, error)
 }
 
 func Register(gRPC *grpc.Server, validator c.Validator, log *slog.Logger) {
@@ -36,12 +51,16 @@ func (s *Server) Login(
 		if !validator.ValideteByRegex(req.GetPassword(), s.validator.PasswordValidate) {
 			return nil, status.Error(codes.InvalidArgument, "incorrect password")
 		}
-		if !validator.ValideteByRegex(fmt.Sprintf("%d",req.GetAppId()), s.validator.AppIDValidate) {
+		if !validator.ValideteByRegex(req.GetAppId(), s.validator.AppIDValidate) {
 			return nil, status.Error(codes.InvalidArgument, "incorrect app id")
 		}
-	return &authProto.LoginResponse{
-		Token: "123",
-	}, nil
+		token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetAppId())
+		if err != nil {
+			return nil, status.Error(codes.Internal, "cant login user")
+		}
+		return &authProto.LoginResponse{
+			Token: token,
+		}, nil
 }
 
 func (s *Server) Register(
@@ -54,19 +73,27 @@ func (s *Server) Register(
 		if !validator.ValideteByRegex(req.GetPassword(), s.validator.PasswordValidate) {
 			return nil, status.Error(codes.InvalidArgument, "incorrect password")
 		}
-	return &authProto.RegisterResponse{
-		UserId: 1,
-	}, nil
+		uId, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
+		if err != nil {
+			return nil, status.Error(codes.Internal, "cant register user")
+		}
+		return &authProto.RegisterResponse{
+			UserId: uId,
+		}, nil
 }
 
 func (s *Server) IsAdmin(
 	ctx context.Context,
 	req *authProto.IsAdminRequest,
 	) (*authProto.IsAdminResponse, error) {
-		if !validator.ValideteByRegex(fmt.Sprintf("%d",req.GetUserId()), s.validator.EmailValidate) {
+		if !validator.ValideteByRegex(req.GetUserId(), s.validator.EmailValidate) {
 			return nil, status.Error(codes.InvalidArgument, "incorrect user id")
 		}
-	return &authProto.IsAdminResponse{
-		IsAdmin: true,
-	}, nil
+		isAdm, err := s.auth.IsAdmin(ctx, req.GetUserId())
+		if err != nil {
+			return nil, status.Error(codes.Internal, "cant check user for admin rights")
+		}
+		return &authProto.IsAdminResponse{
+			IsAdmin: isAdm,
+		}, nil
 }
