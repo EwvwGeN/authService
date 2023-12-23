@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -11,6 +12,8 @@ import (
 	"github.com/EwvwGeN/authService/internal/app"
 	c "github.com/EwvwGeN/authService/internal/config"
 	l "github.com/EwvwGeN/authService/internal/logger"
+	"github.com/EwvwGeN/authService/internal/services/auth"
+	"github.com/EwvwGeN/authService/internal/storage"
 )
 
 var (
@@ -25,12 +28,22 @@ func main() {
 	flag.Parse()
 	cfg, err := c.LoadConfig(configPath)
 	if err != nil {
-		panic(fmt.Sprintf("Cant load config from path %s", configPath ))
+		panic(fmt.Sprintf("cant load config from path %s", configPath ))
 	}
 	logger := l.SetupLogger(cfg.LogLevel)
-	logger.Debug("Config loaded", slog.Any("cfg", cfg))
 
-	application := app.NewSerever(logger, cfg.Validator, cfg.Port)
+	logger.Info("config loaded")
+	logger.Debug("config data", slog.Any("cfg", cfg))
+
+	mongoProvider, err := storage.NewMongoProvider(context.Background(), cfg.MongoConfig)
+	if err != nil {
+		logger.Error("cant get mongo provider", slog.String("error", err.Error()))
+		panic(err)
+	}
+
+	authService := auth.NewAuthService(logger, mongoProvider, mongoProvider, mongoProvider, cfg.TokenTTL)
+
+	application := app.NewSerever(logger, cfg.Validator, authService, cfg.Port)
 	go application.GRPCRun()
 
 	stopChecker := make(chan os.Signal, 1)
