@@ -1,6 +1,8 @@
 package config
 
 import (
+	"time"
+
 	"github.com/spf13/viper"
 )
 
@@ -8,6 +10,8 @@ type Config struct {
 	LogLevel string `mapstructure:"log_level"`
 	Port int `mapstructure:"port"`
 	Validator Validator `mapstructure:"validator"`
+	MongoConfig MongoConfig `mapstructure:"mongo"`
+	TokenTTL time.Duration `mapstructure:"token_ttl"`
 }
 
 func LoadConfig(path string) (*Config, error) {
@@ -27,5 +31,6 @@ func LoadConfig(path string) (*Config, error) {
         return nil, err
     }
 	config.Validator.mustBeRegex()
+	config.TokenTTL *= time.Second
 	return &config, nil
 }

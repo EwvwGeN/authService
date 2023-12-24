@@ -29,7 +29,7 @@ type UserSaver interface {
 }
 
 type UserProvider interface {
-	User(ctx context.Context,
+	GetUser(ctx context.Context,
 		email string,
 	) (models.User, error)
 	IsAdmin(ctx context.Context,
@@ -38,7 +38,7 @@ type UserProvider interface {
 }
 
 type AppProvider interface {
-	App(ctx context.Context,
+	GetApp(ctx context.Context,
 		appId string,
 	) (models.App, error)
 }
@@ -70,7 +70,7 @@ func (a *Auth) Login( ctx context.Context,
 ) (string, error) {
 	a.log.Info("attempting to login user")
 
-	user, err := a.usrProvider.User(ctx, email)
+	user, err := a.usrProvider.GetUser(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			a.log.Warn("user not found", slog.String("error", err.Error()))
@@ -78,7 +78,6 @@ func (a *Auth) Login( ctx context.Context,
 		}
 		a.log.Error("failed to get user", slog.String("error", err.Error()))
 		return "", fmt.Errorf("can't login user: %w", err)
-		
 	}
 
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
@@ -86,7 +85,7 @@ func (a *Auth) Login( ctx context.Context,
 		return "", fmt.Errorf("can't login user: %w", ErrInvalidCredentials)
 	}
 
-	app, err := a.appProdiver.App(ctx, appId)
+	app, err := a.appProdiver.GetApp(ctx, appId)
 	if err != nil {
 		return "", fmt.Errorf("can't login user: %w", err)
 	}
@@ -115,6 +114,10 @@ func (a *Auth) RegisterNewUser( ctx context.Context,
 	}
 	id, err := a.usrSaver.SaveUser(ctx, email, passHash)
 	if err != nil {
+		if errors.Is(err, storage.ErrUserExist) {
+			a.log.Warn("failed to save user", slog.String("error", err.Error()))
+			return "", fmt.Errorf("can't register user: %w", err)
+		}
 		a.log.Error("failed to save user", slog.String("error", err.Error()))
 		return "", fmt.Errorf("can't register user: %w", err)
 	}

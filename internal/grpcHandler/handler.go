@@ -34,10 +34,11 @@ type Auth interface {
 	) (bool, error)
 }
 
-func Register(gRPC *grpc.Server, validator c.Validator, log *slog.Logger) {
+func Register(gRPC *grpc.Server, validator c.Validator, log *slog.Logger, auth Auth) {
 	authProto.RegisterAuthServer(gRPC, &Server{
 		log: log,
 		validator: validator,
+		auth: auth,
 	})
 }
 
@@ -86,7 +87,7 @@ func (s *Server) IsAdmin(
 	ctx context.Context,
 	req *authProto.IsAdminRequest,
 	) (*authProto.IsAdminResponse, error) {
-		if !validator.ValideteByRegex(req.GetUserId(), s.validator.EmailValidate) {
+		if !validator.ValideteByRegex(req.GetUserId(), s.validator.UserIDValidate) {
 			return nil, status.Error(codes.InvalidArgument, "incorrect user id")
 		}
 		isAdm, err := s.auth.IsAdmin(ctx, req.GetUserId())
