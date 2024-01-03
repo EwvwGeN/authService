@@ -8,8 +8,8 @@ import (
 
 	"github.com/EwvwGeN/authService/internal/config"
 	"github.com/EwvwGeN/authService/internal/domain/models"
+	"github.com/docker/docker/api/types/container"
 	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/network"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -25,14 +25,6 @@ var (
 
 func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
 	mongoEnv, serverEnv := parseConfig(cfg)
-	networkCtx := context.Background()
-	network, err := network.New(networkCtx,
-		network.WithCheckDuplicate(),
-		network.WithDriver("bridge"),
-	)
-	if err != nil {
-		return
-	}
     mongoCtx := context.Background()
 	mongoC, err := testcontainers.GenericContainer(mongoCtx, testcontainers.GenericContainerRequest{
         ContainerRequest: testcontainers.ContainerRequest{
@@ -45,11 +37,7 @@ func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
                     FileMode:          0o777,
                 },
             },
-			Name: "mongo_container",
 			Env: mongoEnv,
-			Networks: []string{
-				network.Name,
-			},
         },
         Started: false,
     })
@@ -100,8 +88,8 @@ func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
 			},
 			WaitingFor: wait.ForExposedPort(),
 			Env: serverEnv,
-			Networks: []string{
-				network.Name,
+			HostConfigModifier: func(hc *container.HostConfig) {
+				hc.ExtraHosts = append(hc.ExtraHosts, "host.docker.internal:host-gateway")
 			},
 		},
 		Started: false,
@@ -117,7 +105,6 @@ func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
 	cancelFunc = func() {
 		serverC.Terminate(serverCtx)
 		mongoC.Terminate(mongoCtx)
-		network.Remove(networkCtx)
     }
 
 	serverPorts, err := serverC.Ports(serverCtx)
