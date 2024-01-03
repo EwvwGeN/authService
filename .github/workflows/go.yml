@@ -23,10 +23,9 @@ jobs:
     - name: Install dependencies
       run: go mod tidy
     - name: Build
-      run: go build -v ./cmd/server/main.go
+      run: CGO_ENABLED=0 GOOS=linux go build -o serverMain ./cmd/server/
 
     - name: Unit tests
       run: go test `go list ./... | grep -v ./tests`
     - name: E2E tests
-      run: CGO_ENABLED=0 GOOS=linux go build -o serverMain ./cmd/server/
       run: go test ./tests
