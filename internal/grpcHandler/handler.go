@@ -2,9 +2,12 @@ package grpcHandler
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	c "github.com/EwvwGeN/authService/internal/config"
+	"github.com/EwvwGeN/authService/internal/services/auth"
+	"github.com/EwvwGeN/authService/internal/storage"
 	"github.com/EwvwGeN/authService/internal/validator"
 	authProto "github.com/EwvwGeN/authService/proto/gen/go"
 	"google.golang.org/grpc"
@@ -57,7 +60,11 @@ func (s *Server) Login(
 		}
 		token, err := s.auth.Login(ctx, req.GetEmail(), req.GetPassword(), req.GetAppId())
 		if err != nil {
-			return nil, status.Error(codes.Internal, "cant login user")
+			if errors.Is(err, auth.ErrInvalidCredentials) {
+				return nil, status.Error(codes.InvalidArgument, "invalid email or password")
+			}
+	
+			return nil, status.Error(codes.Internal, "failed to login")
 		}
 		return &authProto.LoginResponse{
 			Token: token,
@@ -76,7 +83,11 @@ func (s *Server) Register(
 		}
 		uId, err := s.auth.RegisterNewUser(ctx, req.GetEmail(), req.GetPassword())
 		if err != nil {
-			return nil, status.Error(codes.Internal, "cant register user")
+			if errors.Is(err, storage.ErrUserExist) {
+				return nil, status.Error(codes.AlreadyExists, "user already exists")
+			}
+	
+			return nil, status.Error(codes.Internal, "failed to register user")
 		}
 		return &authProto.RegisterResponse{
 			UserId: uId,
@@ -92,7 +103,10 @@ func (s *Server) IsAdmin(
 		}
 		isAdm, err := s.auth.IsAdmin(ctx, req.GetUserId())
 		if err != nil {
-			return nil, status.Error(codes.Internal, "cant check user for admin rights")
+			if errors.Is(err, storage.ErrUserNotFound) {
+				return nil, status.Error(codes.NotFound, "user not found")
+			}
+			return nil, status.Error(codes.Internal, "failed to check admin status")
 		}
 		return &authProto.IsAdminResponse{
 			IsAdmin: isAdm,
