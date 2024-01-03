@@ -116,7 +116,7 @@ func (a *Auth) RegisterNewUser( ctx context.Context,
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExist) {
 			a.log.Warn("failed to save user", slog.String("error", err.Error()))
-			return "", fmt.Errorf("can't register user: %w", err)
+			return "", fmt.Errorf("can't register user: %w", storage.ErrUserExist)
 		}
 		a.log.Error("failed to save user", slog.String("error", err.Error()))
 		return "", fmt.Errorf("can't register user: %w", err)
@@ -134,7 +134,7 @@ func (a *Auth) IsAdmin( ctx context.Context,
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			a.log.Warn("user not found", slog.String("error", err.Error()))
-			return false, fmt.Errorf("can't check user: %w", ErrInvalidCredentials)
+			return false, fmt.Errorf("can't check user: %w", storage.ErrUserNotFound)
 		}
 		a.log.Error("failed to get user", slog.String("error", err.Error()))
 		return false, fmt.Errorf("can't check user: %w", err)

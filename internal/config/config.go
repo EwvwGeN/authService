@@ -1,6 +1,9 @@
 package config
 
 import (
+	"fmt"
+	p "path"
+	"strings"
 	"time"
 
 	"github.com/spf13/viper"
@@ -17,9 +20,15 @@ type Config struct {
 func LoadConfig(path string) (*Config, error) {
 	viper.AutomaticEnv()
 	if path != "" {
-		viper.AddConfigPath(path)
-		viper.SetConfigName("config")
-		viper.SetConfigType("yaml")
+		dir := p.Dir(path)
+		file := p.Base(path)
+		fileParts := strings.Split(file, ".")
+		if len(fileParts) != 2 {
+			return nil, fmt.Errorf("incorrect config file: %s", file)
+		}
+		viper.AddConfigPath(dir)
+		viper.SetConfigName(fileParts[0])
+		viper.SetConfigType(fileParts[1])
 		err := viper.ReadInConfig()
 		if err != nil {
 			return nil, err
@@ -31,6 +40,5 @@ func LoadConfig(path string) (*Config, error) {
         return nil, err
     }
 	config.Validator.mustBeRegex()
-	config.TokenTTL *= time.Second
 	return &config, nil
 }
