@@ -87,6 +87,10 @@ func (a *Auth) Login( ctx context.Context,
 
 	app, err := a.appProdiver.GetApp(ctx, appId)
 	if err != nil {
+		if errors.Is(err, storage.ErrAppNotFound) {
+			a.log.Warn("app not found", slog.String("error", err.Error()))
+			return "", fmt.Errorf("can't login user: %w", storage.ErrAppNotFound)
+		}
 		return "", fmt.Errorf("can't login user: %w", err)
 	}
 
