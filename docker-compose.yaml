@@ -85,7 +85,7 @@ services:
       MONGO.DB_HOST: mongo
     build:
       context: ./
-      dockerfile: ./build/Dockerfile
+      dockerfile: ./Dockerfile
     ports:
       - ${PORT}:${INTERNAL_PORT}/tcp
     depends_on:
