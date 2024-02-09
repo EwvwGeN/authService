@@ -28,7 +28,7 @@ func main() {
 	flag.Parse()
 	cfg, err := c.LoadConfig(configPath)
 	if err != nil {
-		panic(fmt.Sprintf("cant load config from path %s", configPath ))
+		panic(fmt.Sprintf("cant load config from path %s: %s", configPath, err.Error()))
 	}
 	logger := l.SetupLogger(cfg.LogLevel)
 
