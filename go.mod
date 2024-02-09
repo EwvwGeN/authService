@@ -6,7 +6,7 @@ require (
 	github.com/brianvoe/gofakeit/v6 v6.26.3
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/spf13/viper v1.18.0
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/testcontainers/testcontainers-go v0.27.0
 	go.mongodb.org/mongo-driver v1.13.1
@@ -47,7 +47,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc5 // indirect
 	github.com/opencontainers/runc v1.1.9 // indirect
-	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
+	github.com/pelletier/go-toml/v2 v2.1.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
@@ -83,3 +83,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.5.1 // indirect
 )
+
+replace github.com/spf13/viper => github.com/EwvwGeN/viper v0.0.1
