@@ -84,4 +84,4 @@ require (
 	gotest.tools/v3 v3.5.1 // indirect
 )
 
-replace github.com/spf13/viper => github.com/EwvwGeN/viper v0.0.1
+replace github.com/spf13/viper => github.com/EwvwGeN/viper v0.1.0
