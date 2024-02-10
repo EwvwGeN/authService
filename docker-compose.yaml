@@ -12,7 +12,7 @@ services:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     networks:
-      - loki
+      - serviceNet
 
   promtail:
     image: grafana/promtail:2.9.0
@@ -20,7 +20,7 @@ services:
       - /var/log:/var/log
     command: -config.file=/etc/promtail/config.yml
     networks:
-      - loki
+      - serviceNet
 
   grafana:
     environment:
@@ -50,7 +50,7 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - loki
+      - serviceNet
 
   mongo:
     logging: *logger
@@ -61,35 +61,42 @@ services:
     ports:
       - 27017:27017
     environment:
+    # You nedd to pass next env variables in .env file:
+    # MONGO_NEWUSER_NAME
+    # MONGO_NEWUSER_PASSWORD
+    # MONGO_INITDB_NAME
+    # MONGO_INITDB_COL_USER
+    # MONGO_INITDB_COL_APP
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: root
-      MONGO_NEWUSER_NAME: ${MONGO_NEWUSER_NAME}
-      MONGO_NEWUSER_PASSWORD: ${MONGO_NEWUSER_PASSWORD}
-      MONGO_INITDB_NAME: ${MONGO_INITDB_NAME}
-      MONGO_INITDB_COL_USER: ${MONGO_INITDB_COL_USER}
-      MONGO_INITDB_COL_APP: ${MONGO_INITDB_COL_APP}
     volumes:
       - ./storage/init/mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh
+    depends_on:
+      - loki
+      - promtail
+      - grafana
+    networks:
+      - serviceNet
+
   server:
     logging: *logger
     env_file:
       .env
     environment:
       MONGO.DB_PORT: 27017
-      MONGO.DB_USER: ${MONGO_NEWUSER_NAME}
-      MONGO.DB_PASS: ${MONGO_NEWUSER_PASSWORD}
-      MONGO.DB_AUTH_SOURCE: ${MONGO_INITDB_NAME}
-      MONGO.DB_NAME: ${MONGO_INITDB_NAME}
-      MONGO.DB_COL_USER: ${MONGO_INITDB_COL_USER}
-      MONGO.DB_COL_APP: ${MONGO_INITDB_COL_APP}
       MONGO.DB_HOST: mongo
     build:
       context: ./
       dockerfile: ./Dockerfile
     ports:
-      - ${PORT}:${INTERNAL_PORT}/tcp
+      - ${PORT}:${PORT}/tcp
     depends_on:
       - mongo
+      - loki
+      - promtail
+      - grafana
+    networks:
+      - serviceNet
 
 networks:
-  loki:
+  serviceNet:
