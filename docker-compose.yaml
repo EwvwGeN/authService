@@ -52,6 +52,23 @@ services:
     networks:
       - serviceNet
 
+  rabbitmq:
+    image: rabbitmq:3.6-management-alpine
+    logging: *logger
+    ports:
+        - 5672:5672
+        - 15672:15672
+    volumes:
+        - ./rabbit/rabbitmq.config:/etc/rabbitmq/rabbitmq.config:ro
+        - ./rabbit/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "5672" ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - serviceNet
+
   mongo:
     logging: *logger
     image: "mongo:7.0.4"
@@ -71,6 +88,11 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: root
     volumes:
       - ./storage/init/mongo-init.sh:/docker-entrypoint-initdb.d/mongo-init.sh
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh mongodb://root:root@localhost:27017 --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
     depends_on:
       - loki
       - promtail
@@ -85,18 +107,20 @@ services:
     environment:
       MONGO.DB_PORT: 27017
       MONGO.DB_HOST: mongo
+      RABBITMQ.HOST: rabbitmq
     build:
       context: ./
       dockerfile: ./Dockerfile
     ports:
       - ${PORT}:${PORT}/tcp
     depends_on:
-      - mongo
-      - loki
-      - promtail
-      - grafana
+      mongo:
+        condition: "service_healthy"
+      rabbitmq:
+        condition: "service_healthy"
     networks:
       - serviceNet
 
 networks:
   serviceNet:
+    driver: bridge

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	c "github.com/EwvwGeN/authService/internal/config"
+	"github.com/EwvwGeN/authService/internal/domain/models"
 	"github.com/EwvwGeN/authService/internal/services/auth"
 	"github.com/EwvwGeN/authService/internal/storage"
 	"github.com/EwvwGeN/authService/internal/validator"
@@ -19,6 +20,7 @@ type Server struct {
 	log *slog.Logger
 	validator c.Validator
 	auth Auth
+	msgSender MessageSender
 	authProto.UnimplementedAuthServer
 }
 
@@ -37,11 +39,18 @@ type Auth interface {
 	) (bool, error)
 }
 
-func Register(gRPC *grpc.Server, validator c.Validator, log *slog.Logger, auth Auth) {
+type MessageSender interface {
+	SendMsg(ctx context.Context,
+		msg *models.Message,
+	) error
+}
+
+func Register(gRPC *grpc.Server, validator c.Validator, log *slog.Logger, auth Auth, msgSender MessageSender) {
 	authProto.RegisterAuthServer(gRPC, &Server{
 		log: log,
 		validator: validator,
 		auth: auth,
+		msgSender: msgSender,
 	})
 }
 
@@ -89,6 +98,15 @@ func (s *Server) Register(
 	
 			return nil, status.Error(codes.Internal, "failed to register user")
 		}
+		err = s.msgSender.SendMsg(ctx, &models.Message{
+			Subject: "Register msg",
+			EmailTo: req.GetEmail(),
+			Body: []byte("tested msg"),
+		})
+		if err != nil {
+			s.log.Error("error while sending registration msg", slog.String("error", err.Error()))
+		}
+		s.log.Info("sended mail", slog.String("userId", uId))
 		return &authProto.RegisterResponse{
 			UserId: uId,
 		}, nil

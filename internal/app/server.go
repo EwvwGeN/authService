@@ -20,11 +20,12 @@ func NewSerever(
 	log *slog.Logger,
 	validator config.Validator,
 	auth grpcHandler.Auth,
+	msgSender grpcHandler.MessageSender,
 	port int,
 ) *Server {
 	grpcS := grpc.NewServer()
 
-	grpcHandler.Register(grpcS, validator, log, auth)
+	grpcHandler.Register(grpcS, validator, log, auth, msgSender)
 
 	return &Server{
 		log: log,

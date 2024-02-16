@@ -12,6 +12,7 @@ import (
 	"github.com/EwvwGeN/authService/internal/app"
 	c "github.com/EwvwGeN/authService/internal/config"
 	l "github.com/EwvwGeN/authService/internal/logger"
+	"github.com/EwvwGeN/authService/internal/queue"
 	"github.com/EwvwGeN/authService/internal/services/auth"
 	"github.com/EwvwGeN/authService/internal/storage"
 )
@@ -41,9 +42,11 @@ func main() {
 		panic(err)
 	}
 
+	producer := queue.StartProducer(context.Background(), logger, cfg.RabbitMQCfg)
+
 	authService := auth.NewAuthService(logger, mongoProvider, mongoProvider, mongoProvider, cfg.TokenTTL)
 
-	application := app.NewSerever(logger, cfg.Validator, authService, cfg.Port)
+	application := app.NewSerever(logger, cfg.Validator, authService, producer, cfg.Port)
 	go application.GRPCRun()
 
 	stopChecker := make(chan os.Signal, 1)
@@ -51,5 +54,6 @@ func main() {
 	<- stopChecker
 	logger.Info("stopping service")
 	application.GRPCStop()
+	producer.Close()
 	logger.Info("service stopped")
 }

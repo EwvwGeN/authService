@@ -8,7 +8,7 @@ validator:
 mongo:
   db_con_format: mongodb
   db_host: localhost
-  db_port: 27018
+  db_port: 27017
   db_user: ttt
   db_pass: ttt
   db_auth_source: testTT
@@ -16,3 +16,24 @@ mongo:
   db_col_user: user
   db_col_app: app
 token_ttl: 30s
+rabbitmq:
+  scheme: amqp
+  host: localhost
+  port: 5672
+  username: user1
+  password: 123
+  virtual_host: vhost1
+  connection_name: testConn
+  exchanger:
+    name: test_exchanger
+    type: direct
+  binding:
+    key: test-key
+  queue:
+    name: test-queue
+  producer:
+    count: 1
+    rstrt_on_error: true 
+    cancel_on_error: false
+    tts: 500s
+    send_await_time: 100s
