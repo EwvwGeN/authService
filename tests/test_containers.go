@@ -142,6 +142,7 @@ func parseConfig(cfg *config.Config) (mongoEnv, serverEnv map[string]string) {
 		"MONGO.DB_NAME": cfg.MongoConfig.Database,
 		"MONGO.DB_COL_USER": cfg.MongoConfig.UserCollection,
 		"MONGO.DB_COL_APP": cfg.MongoConfig.AppCollection,
+		"RABBITMQ.PRODUCER.COUNT": fmt.Sprintf("%d",cfg.RabbitMQCfg.ProducerConfig.Count),
 		"TOKEN_TTL": cfg.TokenTTL.String(),
 	}
 	return

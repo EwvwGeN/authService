@@ -15,4 +15,8 @@ mongo:
   db_name: testTT
   db_col_user: user
   db_col_app: app
+rabbitmq:
+  producer:
+    count: 0
+    send_await_time: 0s
 token_ttl: 30s

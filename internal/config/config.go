@@ -16,6 +16,7 @@ type Config struct {
 	Port int `mapstructure:"port"`
 	Validator Validator `mapstructure:"validator"`
 	MongoConfig MongoConfig `mapstructure:"mongo"`
+	RabbitMQCfg RabbitMQConfig `mapstructure:"rabbitmq"`
 	TokenTTL time.Duration `mapstructure:"token_ttl"`
 }
 
