@@ -98,15 +98,18 @@ func (s *Server) Register(
 	
 			return nil, status.Error(codes.Internal, "failed to register user")
 		}
-		err = s.msgSender.SendMsg(ctx, &models.Message{
-			Subject: "Register msg",
-			EmailTo: req.GetEmail(),
-			Body: []byte("tested msg"),
-		})
-		if err != nil {
-			s.log.Error("error while sending registration msg", slog.String("error", err.Error()))
-		}
-		s.log.Info("sended mail", slog.String("userId", uId))
+		go func (){
+			err = s.msgSender.SendMsg(ctx, &models.Message{
+				Subject: "Register msg",
+				EmailTo: req.GetEmail(),
+				Body: []byte("tested msg"),
+			})
+			if err != nil {
+				s.log.Error("error while sending registration msg", slog.String("userId", uId), slog.String("error", err.Error()))
+			} else {
+				s.log.Info("sended mail", slog.String("userId", uId))
+			}
+		}()
 		return &authProto.RegisterResponse{
 			UserId: uId,
 		}, nil
