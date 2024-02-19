@@ -2,7 +2,6 @@ package template
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -29,8 +28,6 @@ func Test_HappyPass(t *testing.T) {
     </div>
 </body>
 </html>`, link, link)
-
-	expectedTmpl = strings.ReplaceAll(expectedTmpl, "\n", "\r\n")
 
 	body, err := Register(link)
 	require.NoError(t, err)
