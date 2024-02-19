@@ -5,10 +5,11 @@ COPY internal/ ./internal
 COPY proto/ ./proto
 COPY go.mod .
 RUN go mod tidy
-RUN CGO_ENABLED=0 GOOS=linux go build -o /main ./cmd/server/
+RUN CGO_ENABLED=0 GOOS=linux go build -o ./main ./cmd/server/
 
-FROM scratch AS runner
+FROM alpine AS runner
 WORKDIR /
-COPY --from=builder /main /main
+COPY --from=builder /app/main /main
+COPY --from=builder /app/internal/template/html /html
 
 ENTRYPOINT ["./main"]
