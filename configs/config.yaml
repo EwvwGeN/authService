@@ -5,6 +5,8 @@ validator:
   password: ^.{5,}$
   user_id: ^[a-f\d]{24}$
   app_id: ^[a-f\d]{24}$
+template:
+  reg_link: localhost:1111/user/verification
 mongo:
   db_con_format: mongodb
   db_host: localhost

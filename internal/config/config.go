@@ -15,6 +15,7 @@ type Config struct {
 	LogLevel string `mapstructure:"log_level"`
 	Port int `mapstructure:"port"`
 	Validator Validator `mapstructure:"validator"`
+	Template Template `mapstructure:"template"`
 	MongoConfig MongoConfig `mapstructure:"mongo"`
 	RabbitMQCfg RabbitMQConfig `mapstructure:"rabbitmq"`
 	TokenTTL time.Duration `mapstructure:"token_ttl"`
