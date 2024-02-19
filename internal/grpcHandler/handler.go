@@ -3,13 +3,16 @@ package grpcHandler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	c "github.com/EwvwGeN/authService/internal/config"
 	"github.com/EwvwGeN/authService/internal/domain/models"
 	"github.com/EwvwGeN/authService/internal/services/auth"
 	"github.com/EwvwGeN/authService/internal/storage"
+	tmpl "github.com/EwvwGeN/authService/internal/template"
 	"github.com/EwvwGeN/authService/internal/validator"
+	"github.com/EwvwGeN/authService/internal/verification"
 	authProto "github.com/EwvwGeN/authService/proto/gen/go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -19,6 +22,7 @@ import (
 type Server struct {
 	log *slog.Logger
 	validator c.Validator
+	template c.Template
 	auth Auth
 	msgSender MessageSender
 	authProto.UnimplementedAuthServer
@@ -45,10 +49,11 @@ type MessageSender interface {
 	) error
 }
 
-func Register(gRPC *grpc.Server, validator c.Validator, log *slog.Logger, auth Auth, msgSender MessageSender) {
+func Register(gRPC *grpc.Server, validator c.Validator, template c.Template, log *slog.Logger, auth Auth, msgSender MessageSender) {
 	authProto.RegisterAuthServer(gRPC, &Server{
 		log: log,
 		validator: validator,
+		template: template,
 		auth: auth,
 		msgSender: msgSender,
 	})
@@ -98,18 +103,31 @@ func (s *Server) Register(
 	
 			return nil, status.Error(codes.Internal, "failed to register user")
 		}
-		go func (){
+		go func (uId string){
+			vCode, err := verification.GenerateVerificationCode(uId)
+			if err != nil {
+				s.log.Error("error while creating verification code", slog.String("userId", uId), slog.String("error", err.Error()))
+				return
+			}
+			s.log.Debug("create verification code", slog.String("userId", uId), slog.String("code", vCode))
+			link := fmt.Sprintf("%s?verificationCode=%s", s.template.RgistrationLink, verification.ConvertForURL(vCode))
+			msgBody, err := tmpl.Register(link)
+			s.log.Debug("created message", slog.String("userId", uId), slog.String("msg", string(msgBody)))
+			if err != nil {
+				s.log.Error("error while parsing template", slog.String("userId", uId), slog.String("error", err.Error()))
+				return
+			}
 			err = s.msgSender.SendMsg(ctx, &models.Message{
 				Subject: "Register msg",
 				EmailTo: req.GetEmail(),
-				Body: []byte("tested msg"),
+				Body: msgBody,
 			})
 			if err != nil {
 				s.log.Error("error while sending registration msg", slog.String("userId", uId), slog.String("error", err.Error()))
 			} else {
 				s.log.Info("sended mail", slog.String("userId", uId))
 			}
-		}()
+		}(uId)
 		return &authProto.RegisterResponse{
 			UserId: uId,
 		}, nil

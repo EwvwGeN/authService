@@ -19,13 +19,14 @@ type Server struct {
 func NewSerever(
 	log *slog.Logger,
 	validator config.Validator,
+	template config.Template,
 	auth grpcHandler.Auth,
 	msgSender grpcHandler.MessageSender,
 	port int,
 ) *Server {
 	grpcS := grpc.NewServer()
 
-	grpcHandler.Register(grpcS, validator, log, auth, msgSender)
+	grpcHandler.Register(grpcS, validator, template, log, auth, msgSender)
 
 	return &Server{
 		log: log,
