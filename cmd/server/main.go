@@ -15,6 +15,7 @@ import (
 	"github.com/EwvwGeN/authService/internal/queue"
 	"github.com/EwvwGeN/authService/internal/services/auth"
 	"github.com/EwvwGeN/authService/internal/storage"
+	tmpl "github.com/EwvwGeN/authService/internal/template"
 )
 
 var (
@@ -36,6 +37,12 @@ func main() {
 	logger.Info("config loaded")
 	logger.Debug("config data", slog.Any("cfg", cfg))
 
+	err = tmpl.PrepareTemplates()
+	if err != nil {
+		logger.Error("cant prepare templates", slog.String("error", err.Error()))
+		panic(err)
+	}
+
 	mongoProvider, err := storage.NewMongoProvider(context.Background(), cfg.MongoConfig)
 	if err != nil {
 		logger.Error("cant get mongo provider", slog.String("error", err.Error()))
@@ -46,7 +53,7 @@ func main() {
 
 	authService := auth.NewAuthService(logger, mongoProvider, mongoProvider, mongoProvider, cfg.TokenTTL)
 
-	application := app.NewSerever(logger, cfg.Validator, authService, producer, cfg.Port)
+	application := app.NewSerever(logger, cfg.Validator, cfg.Template, authService, producer, cfg.Port)
 	go application.GRPCRun()
 
 	stopChecker := make(chan os.Signal, 1)

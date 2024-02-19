@@ -1,6 +1,7 @@
 package verification
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -11,9 +12,10 @@ import (
 func Test_HappyPass(t *testing.T) {
 	uuid := gofakeit.UUID()
 
-	vCode, err := GenerateVerificationCode([]byte(uuid))
+	vCode, err := GenerateVerificationCode(uuid)
 	require.NoError(t, err)
-
+	check := string(vCode)
+	fmt.Println(check)
 	decodedUid, err := DecryptVerificationCode(vCode)
 	require.NoError(t, err)
 
@@ -23,7 +25,7 @@ func Test_HappyPass(t *testing.T) {
 func Test_Fall(t *testing.T) {
 	uuid := gofakeit.UUID()
 
-	vCode, err := GenerateVerificationCode([]byte(uuid))
+	vCode, err := GenerateVerificationCode(uuid)
 	require.NoError(t, err)
 
 	decodedUid, err := DecryptVerificationCode(vCode)
@@ -36,7 +38,7 @@ func Test_Fall(t *testing.T) {
 func Test_OneKeyForSession(t *testing.T) {
 	uuid := gofakeit.UUID()
 
-	vCode, err := GenerateVerificationCode([]byte(uuid))
+	vCode, err := GenerateVerificationCode(uuid)
 	require.NoError(t, err)
 
 	decodedUid, err := DecryptVerificationCode(vCode)
@@ -44,7 +46,7 @@ func Test_OneKeyForSession(t *testing.T) {
 
 	require.Equal(t, string(decodedUid), uuid)
 
-	_, err = GenerateVerificationCode([]byte(uuid))
+	_, err = GenerateVerificationCode(uuid)
 	require.NoError(t, err)
 
 	decodedUid, err = DecryptVerificationCode(vCode)

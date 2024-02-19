@@ -4,61 +4,86 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/base64"
+	"io"
+	mr "math/rand"
+	"net/url"
+	"time"
+	"unsafe"
 )
 
 var (
 	key []byte
 )
 
-func GenerateVerificationCode(data []byte) ([]byte, error) {
-
+func GenerateVerificationCode(data string) (string, error) {
 	if key == nil {
-		key = generateKey()
+		key = generateKey(32)
 	}
 
-	blockCipher, err := aes.NewCipher(key)
+	plaintext := []byte(data)
+
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		panic(err.Error())
 	}
 
-	gcm, err := cipher.NewGCM(blockCipher)
-	if err != nil {
-		return nil, err
+	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
+	iv := ciphertext[:aes.BlockSize]
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		panic(err)
 	}
 
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err = rand.Read(nonce); err != nil {
-		return nil, err
-	}
+	stream := cipher.NewCFBEncrypter(block, iv)
+	stream.XORKeyStream(ciphertext[aes.BlockSize:], plaintext)
 
-	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-
-	return ciphertext, nil
+	return base64.URLEncoding.EncodeToString(ciphertext), nil
 }
 
-func DecryptVerificationCode(data []byte) ([]byte, error) {
-    blockCipher, err := aes.NewCipher(key)
-    if err != nil {
-        return nil, err
-    }
+func DecryptVerificationCode(data string) (string, error) {
+	ciphertext, _ := base64.URLEncoding.DecodeString(data)
 
-    gcm, err := cipher.NewGCM(blockCipher)
-    if err != nil {
-        return nil, err
-    }
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		panic(err)
+	}
 
-    nonce, ciphertext := data[:gcm.NonceSize()], data[gcm.NonceSize():]
+	if len(ciphertext) < aes.BlockSize {
+		panic("ciphertext too short")
+	}
+	iv := ciphertext[:aes.BlockSize]
+	ciphertext = ciphertext[aes.BlockSize:]
 
-    plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-    if err != nil {
-        return nil, err
-    }
+	stream := cipher.NewCFBDecrypter(block, iv)
 
-    return plaintext, nil
+	stream.XORKeyStream(ciphertext, ciphertext)
+
+    return string(ciphertext), nil
 }
 
-func generateKey() ([]byte) {
-    key := make([]byte, 32)
-	rand.Read(key)
-    return key
+func generateKey(n int) ([]byte) {
+
+	letterBytes := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    letterIdxBits := 6
+    var letterIdxMask int64 = 1<<letterIdxBits - 1
+    letterIdxMax  := 63 / letterIdxBits
+	src := mr.NewSource(time.Now().UnixNano())
+	b := make([]byte, n)
+    for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
+        if remain == 0 {
+            cache, remain = src.Int63(), letterIdxMax
+        }
+        if idx := int(cache & letterIdxMask); idx < len(letterBytes) {
+            b[i] = letterBytes[idx]
+            i--
+        }
+        cache >>= letterIdxBits
+        remain--
+    }
+
+    return *(*[]byte)(unsafe.Pointer(&b))
+}
+
+func ConvertForURL(code string) string {
+	return url.QueryEscape(code)
 }
