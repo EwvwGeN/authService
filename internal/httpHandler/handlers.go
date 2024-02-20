@@ -25,10 +25,11 @@ func (s *Server) confirmUser() httpFunc {
 		userId, err := verification.DecryptVerificationCode(code)
 		if err != nil {
 			http.Error(w, fmt.Errorf("cant decode verification code: %w", err).Error(), http.StatusInternalServerError)
+			return
 		}
 		user, err := s.usrProvider.GetUserById(r.Context(), userId)
 		if err != nil {
-			http.Error(w, fmt.Errorf("cant finde user: %w", err).Error(), http.StatusNotFound)
+			http.Error(w, fmt.Errorf("cant find user: %w", err).Error(), http.StatusNotFound)
 			return
 		}
 		err = s.confirmator.ConfirmUser(r.Context(), user.Id)
