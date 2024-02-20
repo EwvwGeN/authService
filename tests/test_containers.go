@@ -64,7 +64,7 @@ func prepareContainers(cfg *config.Config) (UserСonfirmator func(email string) 
 	}
 	UserСonfirmator = func(email string) error {
 		_, _, err := mongoC.Exec(mongoCtx, []string{
-			fmt.Sprintf("mongosh"),
+			"mongosh",
 			"-eval", fmt.Sprintf("use %s", cfg.MongoConfig.Database),
 			"-eval", fmt.Sprintf(
 				"db.%s.updateOne({email: \"%s\"}, {\"$set\": {confirmed: true}})",
