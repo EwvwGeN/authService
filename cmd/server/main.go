@@ -11,6 +11,7 @@ import (
 
 	"github.com/EwvwGeN/authService/internal/app"
 	c "github.com/EwvwGeN/authService/internal/config"
+	"github.com/EwvwGeN/authService/internal/httpHandler"
 	l "github.com/EwvwGeN/authService/internal/logger"
 	"github.com/EwvwGeN/authService/internal/queue"
 	"github.com/EwvwGeN/authService/internal/services/auth"
@@ -56,11 +57,24 @@ func main() {
 	application := app.NewSerever(logger, cfg.Validator, cfg.Template, authService, producer, cfg.Port)
 	go application.GRPCRun()
 
+	httpApp := httpHandler.NewServer(cfg.HttpConfig, logger, nil, nil)
+	err = httpApp.Start()
+	if err != nil {
+		logger.Error("error while starting http server", slog.String("error", err.Error()))
+	}
+
 	stopChecker := make(chan os.Signal, 1)
 	signal.Notify(stopChecker, syscall.SIGTERM, syscall.SIGINT)
 	<- stopChecker
 	logger.Info("stopping service")
 	application.GRPCStop()
-	producer.Close()
+	err = producer.Close()
+	if err != nil {
+		logger.Error("error while closing producer", slog.String("error", err.Error()))
+	}
+	err = httpApp.Close(context.Background())
+	if err != nil {
+		logger.Error("error while closing http server", slog.String("error", err.Error()))
+	}
 	logger.Info("service stopped")
 }
