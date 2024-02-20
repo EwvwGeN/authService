@@ -9,6 +9,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func Test_KeySessionNotStarted(t *testing.T) {
+	code := "123213123"
+	_, err := DecryptVerificationCode(code)
+	require.ErrorIs(t, err, ErrKeySession)
+}
+
 func Test_HappyPass(t *testing.T) {
 	uuid := gofakeit.UUID()
 
@@ -55,8 +61,12 @@ func Test_OneKeyForSession(t *testing.T) {
 	require.Equal(t, string(decodedUid), uuid)
 }
 
-func Test_KeySessionNotStarted(t *testing.T) {
-	code := "123213123"
-	_, err := DecryptVerificationCode(code)
-	require.ErrorIs(t, err, ErrKeySession)
+func Test_CodeLenFall(t *testing.T) {
+	uuid := gofakeit.UUID()
+
+	_, err := GenerateVerificationCode(uuid)
+	require.NoError(t, err)
+
+	_, err = DecryptVerificationCode("132")
+	require.ErrorIs(t, err, ErrCodeSize)
 }
