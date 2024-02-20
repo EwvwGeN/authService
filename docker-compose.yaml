@@ -112,7 +112,8 @@ services:
       context: ./
       dockerfile: ./Dockerfile
     ports:
-      - ${PORT}:${PORT}/tcp
+      - ${GRPC_PORT}:${GRPC_PORT}/tcp
+      - ${HTTP_PORT}:${HTTP_PORT}/tcp
     depends_on:
       mongo:
         condition: "service_healthy"

@@ -13,30 +13,29 @@ import (
 type Server struct {
 	log *slog.Logger
 	grpcServer *grpc.Server
-	port int
+	cfg config.GRPCConfig
 }
 
 func NewSerever(
 	log *slog.Logger,
 	validator config.Validator,
-	template config.Template,
+	cfg config.GRPCConfig,
 	auth grpcHandler.Auth,
 	msgSender grpcHandler.MessageSender,
-	port int,
 ) *Server {
 	grpcS := grpc.NewServer()
 
-	grpcHandler.Register(grpcS, validator, template, log, auth, msgSender)
+	grpcHandler.Register(grpcS, validator, cfg, log, auth, msgSender)
 
 	return &Server{
 		log: log,
 		grpcServer: grpcS,
-		port: port,
+		cfg: cfg,
 	}
 }
 
 func (s *Server) GRPCRun() error {
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", s.port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", s.cfg.Host, s.cfg.Port))
 	if err != nil {
 		return fmt.Errorf("can't create listener: %w", err)
 	}

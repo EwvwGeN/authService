@@ -29,7 +29,7 @@ type UserSaver interface {
 }
 
 type UserProvider interface {
-	GetUser(ctx context.Context,
+	GetUserByEmail(ctx context.Context,
 		email string,
 	) (models.User, error)
 	IsAdmin(ctx context.Context,
@@ -42,10 +42,6 @@ type AppProvider interface {
 		appId string,
 	) (models.App, error)
 }
-
-var (
-	ErrInvalidCredentials = errors.New("invalid credentials")
-)
 
 func NewAuthService(
 	log *slog.Logger,
@@ -70,7 +66,7 @@ func (a *Auth) Login( ctx context.Context,
 ) (string, error) {
 	a.log.Info("attempting to login user")
 
-	user, err := a.usrProvider.GetUser(ctx, email)
+	user, err := a.usrProvider.GetUserByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
 			a.log.Warn("user not found", slog.String("error", err.Error()))
@@ -79,7 +75,10 @@ func (a *Auth) Login( ctx context.Context,
 		a.log.Error("failed to get user", slog.String("error", err.Error()))
 		return "", fmt.Errorf("can't login user: %w", err)
 	}
-
+	if !user.Confirmed {
+		a.log.Warn(ErrUserNotConfirmed.Error())
+		return "", fmt.Errorf("can't login user: %w", ErrUserNotConfirmed)
+	}
 	if err := bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
 		a.log.Warn("invalid credentials", slog.String("error", err.Error()))
 		return "", fmt.Errorf("can't login user: %w", ErrInvalidCredentials)
@@ -127,6 +126,23 @@ func (a *Auth) RegisterNewUser( ctx context.Context,
 	}
 	a.log.Info("user registered", slog.String("UserId", id))
 	return id, nil
+}
+
+func (a *Auth) CheckEmailConfirm( ctx context.Context,
+	email string,
+) (string, bool, error) {
+	a.log.Info("checking email confirm", slog.String("email", email))
+
+	user, err := a.usrProvider.GetUserByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			a.log.Warn("user not found", slog.String("error", err.Error()))
+			return "", false, fmt.Errorf("can't check email: %w", storage.ErrUserNotFound)
+		}
+		a.log.Error("failed to get user", slog.String("error", err.Error()))
+		return "", false, fmt.Errorf("can't check email: %w", err)
+	}
+	return user.Id, user.Confirmed, nil
 }
 
 func (a *Auth) IsAdmin( ctx context.Context,

@@ -3,7 +3,6 @@ package tests
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/EwvwGeN/authService/internal/config"
@@ -23,7 +22,7 @@ var (
 	AdminUser models.User
 )
 
-func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
+func prepareContainers(cfg *config.Config) (UserСonfirmator func(email string) error, cancelFunc func(), err error) {
 	mongoEnv, serverEnv := parseConfig(cfg)
     mongoCtx := context.Background()
 	mongoC, err := testcontainers.GenericContainer(mongoCtx, testcontainers.GenericContainerRequest{
@@ -63,7 +62,18 @@ func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
 	if err != nil {
 		return
 	}
-	
+	UserСonfirmator = func(email string) error {
+		_, _, err := mongoC.Exec(mongoCtx, []string{
+			"mongosh",
+			"-eval", fmt.Sprintf("use %s", cfg.MongoConfig.Database),
+			"-eval", fmt.Sprintf(
+				"db.%s.updateOne({email: \"%s\"}, {\"$set\": {confirmed: true}})",
+				cfg.MongoConfig.UserCollection,
+				email,
+			),
+		})
+		return err
+	}
 	mongoPorts, err := mongoC.Ports(mongoCtx)
 	if err != nil {
 		return
@@ -84,7 +94,7 @@ func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
 				Dockerfile: "./tests/build/Dockerfile",
 			},
 			ExposedPorts: []string{
-				fmt.Sprintf("%d/tcp", cfg.Port),
+				fmt.Sprintf("%s/tcp", cfg.GRPCConfig.Port),
 			},
 			WaitingFor: wait.ForExposedPort(),
 			Env: serverEnv,
@@ -111,17 +121,14 @@ func prepareContainers(cfg *config.Config) (cancelFunc func(), err error) {
 	if err != nil {
 		return
 	}
-	sPort := serverPorts["44044/tcp"][0].HostPort
-	intPort, _ := strconv.Atoi(sPort)
-	cfg.Port = intPort
+	port := serverPorts["44044/tcp"][0].HostPort
+	cfg.GRPCConfig.Port = port
 	
 	return
 }
 
 func parseConfig(cfg *config.Config) (mongoEnv, serverEnv map[string]string) {
 	mongoEnv = map[string]string{
-		"MONGO_INITDB_ROOT_USERNAME": "root",
-		"MONGO_INITDB_ROOT_PASSWORD": "root",
 		"MONGO_NEWUSER_NAME": cfg.MongoConfig.User,
 		"MONGO_NEWUSER_PASSWORD": cfg.MongoConfig.Password,
 		"MONGO_INITDB_NAME": cfg.MongoConfig.Database,
@@ -130,7 +137,8 @@ func parseConfig(cfg *config.Config) (mongoEnv, serverEnv map[string]string) {
 	}
 	serverEnv = map[string]string{
 		"LOG_LEVEL": cfg.LogLevel,
-		"PORT": fmt.Sprintf("%d",cfg.Port),
+		"GRPC.PORT": cfg.GRPCConfig.Port,
+		"HTTP.PORT": cfg.HttpConfig.Port,
 		"VALIDATOR.EMAIL": cfg.Validator.EmailValidate,
 		"VALIDATOR.PASSWORD": cfg.Validator.PasswordValidate,
 		"VALIDATOR.USER_ID": cfg.Validator.UserIDValidate,

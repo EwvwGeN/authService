@@ -1,12 +1,16 @@
 log_level: info
-port: 44044
+
 validator:
   email: ^(([^<>()\[\]\\.,;:\s@\"]+(\.[^<>()\[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$
   password: ^.{5,}$
   user_id: ^[a-f\d]{24}$
   app_id: ^[a-f\d]{24}$
-template:
-  reg_link: localhost:1111/user/verification
+grpc:
+  reg_link: localhost:9090/user/verification
+  port: 44044
+http:
+  host: 0.0.0.0
+  port: 9090
 mongo:
   db_con_format: mongodb
   db_host: localhost
@@ -39,6 +43,3 @@ rabbitmq:
     cancel_on_error: false
     tts: 500s
     send_await_time: 100s
-http:
-  host: 0.0.0.0
-  port: 9090

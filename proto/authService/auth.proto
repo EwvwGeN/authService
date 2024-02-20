@@ -14,6 +14,15 @@ message RegisterResponse {
     string user_id = 1;
 }
 
+// Resend
+message ResendRequest {
+    string email = 1;
+}
+
+message ResendResponse {
+    bool sended = 1;
+}
+
 // LOGIN
 message LoginRequest {
     string email = 1;
@@ -36,6 +45,7 @@ message IsAdminResponse {
 
 service Auth {
     rpc Register (RegisterRequest) returns (RegisterResponse);
+    rpc ResendMail (ResendRequest) returns (ResendResponse);
     rpc Login (LoginRequest) returns (LoginResponse);
     rpc IsAdmin (IsAdminRequest) returns (IsAdminResponse);
 }

@@ -27,19 +27,21 @@ func (s *Server) confirmUser() httpFunc {
 			http.Error(w, fmt.Errorf("cant decode verification code: %w", err).Error(), http.StatusInternalServerError)
 			return
 		}
+		log.Debug("get userId", slog.String("userId", userId))
 		user, err := s.usrProvider.GetUserById(r.Context(), userId)
 		if err != nil {
 			http.Error(w, fmt.Errorf("cant find user: %w", err).Error(), http.StatusNotFound)
 			return
 		}
-		err = s.confirmator.ConfirmUser(r.Context(), user.Id)
+		cnfrd, err := s.confirmator.ConfirmUser(r.Context(), user.Id)
 		if err != nil {
 			http.Error(w, fmt.Errorf("cant confirm user: %w", err).Error(), http.StatusInternalServerError)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-        fmt.Fprint(w, map[string]string{
-			"message": "user confirmed",
+        fmt.Fprint(w, map[string]interface{}{
+			"message": "pass",
+			"confirmed": cnfrd,
 		})
 	}
 }

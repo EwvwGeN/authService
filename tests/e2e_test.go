@@ -3,7 +3,6 @@ package tests
 import (
 	"context"
 	"fmt"
-	"log"
 	"testing"
 	"time"
 
@@ -27,17 +26,19 @@ type testSuite struct {
 	cfg        *config.Config
 	grpcC      authProto.AuthClient
 	clientConn *grpc.ClientConn
+	userConfirmator func(email string) error
 	cancelFunc func()
 }
 
 func (suite *testSuite) SetupSuite() {
 	cfg, err := config.LoadConfig("./configs/test_config.yaml")
 	suite.Require().NoError(err)
-	cancel, err := prepareContainers(cfg)
-	suite.cancelFunc = cancel
+	userConfirmator, cancel, err := prepareContainers(cfg)
 	suite.Require().NoError(err)
+	suite.cancelFunc = cancel
+	suite.userConfirmator = userConfirmator
 	clientConn, err := grpc.DialContext(context.Background(),
-		fmt.Sprintf("localhost:%d", cfg.Port),
+		fmt.Sprintf("localhost:%s", cfg.GRPCConfig.Port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	suite.Require().NoError(err)
 	suite.cancelFunc = cancel
@@ -102,7 +103,8 @@ func (suite *testSuite) TestLoginHappyPass() {
 	})
 	suite.Require().NoError(err)
 	suite.NotEmpty(resReg.GetUserId())
-	log.Println(CorrectApp)
+	err = suite.userConfirmator(email)
+	suite.Require().NoError(err)
 	resLog, err := suite.grpcC.Login(context.Background(), &authProto.LoginRequest{
 		Email:    email,
 		Password: pwd,
@@ -148,6 +150,8 @@ func (suite *testSuite) TestLoginIncorrectUserPassword() {
 		Password: pwd,
 	})
 	suite.Require().NoError(err)
+	err = suite.userConfirmator(email)
+	suite.Require().NoError(err)
 	suite.NotEmpty(resReg.GetUserId())
 	resLog, err := suite.grpcC.Login(context.Background(), &authProto.LoginRequest{
 		Email:    email,
@@ -167,6 +171,8 @@ func (suite *testSuite) TestLoginIncorrectAppId() {
 	})
 	suite.Require().NoError(err)
 	suite.NotEmpty(resReg.GetUserId())
+	err = suite.userConfirmator(email)
+	suite.Require().NoError(err)
 	resLog, err := suite.grpcC.Login(context.Background(), &authProto.LoginRequest{
 		Email:    email,
 		Password: pwd,
@@ -188,6 +194,8 @@ func (suite *testSuite) TestIsAdminFalseHappyPass() {
 	})
 	suite.Require().NoError(err)
 	suite.NotEmpty(resReg.GetUserId())
+	err = suite.userConfirmator(email)
+	suite.Require().NoError(err)
 	resCheck, err := suite.grpcC.IsAdmin(context.Background(), &authProto.IsAdminRequest{
 		UserId: resReg.GetUserId(),
 	})
