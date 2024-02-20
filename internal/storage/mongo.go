@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/EwvwGeN/authService/internal/config"
@@ -17,11 +16,6 @@ type mongoProvider struct {
 	cfg config.MongoConfig
 	db *mongo.Database
 }
-
-var (
-	ErrDbNotExist = errors.New("database does not exist")
-	ErrCollNotExist = errors.New("some of collections does not exist")
-)
 
 func NewMongoProvider(ctx context.Context, cfg config.MongoConfig) (*mongoProvider, error) {
 	client, err := mongo.Connect(ctx,
@@ -82,10 +76,49 @@ func (mp *mongoProvider) SaveUser( ctx context.Context,
 	return inRes.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func (mp *mongoProvider) GetUser(ctx context.Context,
+func (mp *mongoProvider) ConfirmUser( ctx context.Context,
+	userId string,
+) (bool, error) {
+	objectId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return false, err
+	}
+	user := mp.db.Collection(mp.cfg.UserCollection).FindOne(ctx, bson.D{{Key: "_id", Value: objectId}})
+	if m, _ := user.Raw(); m != nil {
+		var foundUser models.User
+		user.Decode(&foundUser)
+		foundUser.Id = m.Index(0).Value().ObjectID().Hex()
+		if foundUser.Confirmed {
+			return true, ErrUserConfirm
+		}
+		foundUser.Confirmed = true
+		mp.db.Collection(mp.cfg.UserCollection).UpdateOne(ctx, bson.D{{Key: "_id", Value: objectId}}, bson.D{{Key: "$set", Value: bson.D{{Key: "confirmed", Value: true}}}})
+		return true, nil
+	}
+	return false, ErrUserNotFound
+}
+
+func (mp *mongoProvider) GetUserByEmail(ctx context.Context,
 	email string,
 ) (models.User, error) {
 	user := mp.db.Collection(mp.cfg.UserCollection).FindOne(ctx, bson.D{{Key: "email", Value: email}})
+	if m, _ := user.Raw(); m != nil {
+		var outUser models.User
+		user.Decode(&outUser)
+		outUser.Id = m.Index(0).Value().ObjectID().Hex()
+		return outUser, nil
+	}
+	return models.User{}, ErrUserNotFound
+}
+
+func (mp *mongoProvider) GetUserById(ctx context.Context,
+	userId string,
+) (models.User, error) {
+	objectId, err := primitive.ObjectIDFromHex(userId)
+	if err != nil {
+		return models.User{}, err
+	}
+	user := mp.db.Collection(mp.cfg.UserCollection).FindOne(ctx, bson.D{{Key: "_id", Value: objectId}})
 	if m, _ := user.Raw(); m != nil {
 		var outUser models.User
 		user.Decode(&outUser)

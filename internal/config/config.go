@@ -13,9 +13,8 @@ var serviceTag string = "auth_service"
 
 type Config struct {
 	LogLevel string `mapstructure:"log_level"`
-	Port int `mapstructure:"port"`
 	Validator Validator `mapstructure:"validator"`
-	Template Template `mapstructure:"template"`
+	GRPCConfig GRPCConfig `mapstructure:"grpc"`
 	HttpConfig HttpConfig `mapstructure:"http"`
 	MongoConfig MongoConfig `mapstructure:"mongo"`
 	RabbitMQCfg RabbitMQConfig `mapstructure:"rabbitmq"`

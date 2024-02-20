@@ -54,10 +54,10 @@ func main() {
 
 	authService := auth.NewAuthService(logger, mongoProvider, mongoProvider, mongoProvider, cfg.TokenTTL)
 
-	application := app.NewSerever(logger, cfg.Validator, cfg.Template, authService, producer, cfg.Port)
+	application := app.NewSerever(logger, cfg.Validator, cfg.GRPCConfig, authService, producer)
 	go application.GRPCRun()
 
-	httpApp := httpHandler.NewServer(cfg.HttpConfig, logger, nil, nil)
+	httpApp := httpHandler.NewServer(cfg.HttpConfig, logger, mongoProvider, mongoProvider)
 	err = httpApp.Start()
 	if err != nil {
 		logger.Error("error while starting http server", slog.String("error", err.Error()))

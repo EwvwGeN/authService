@@ -24,7 +24,7 @@ type Server struct {
 type UserСonfirmator interface {
 	ConfirmUser(ctx context.Context,
 		userId string,
-	) error
+	) (bool, error)
 }
 
 type UserProvider interface {

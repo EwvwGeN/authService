@@ -22,7 +22,7 @@ import (
 type Server struct {
 	log *slog.Logger
 	validator c.Validator
-	template c.Template
+	cfg c.GRPCConfig
 	auth Auth
 	msgSender MessageSender
 	authProto.UnimplementedAuthServer
@@ -38,6 +38,9 @@ type Auth interface {
 		email string,
 		password string,
 	) (userId string, err error)
+	CheckEmailConfirm(ctx context.Context,
+	email string,
+	) (string, bool, error)
 	IsAdmin(ctx context.Context,
 	userId string,
 	) (bool, error)
@@ -49,11 +52,11 @@ type MessageSender interface {
 	) error
 }
 
-func Register(gRPC *grpc.Server, validator c.Validator, template c.Template, log *slog.Logger, auth Auth, msgSender MessageSender) {
+func Register(gRPC *grpc.Server, validator c.Validator, cfg c.GRPCConfig, log *slog.Logger, auth Auth, msgSender MessageSender) {
 	authProto.RegisterAuthServer(gRPC, &Server{
 		log: log,
 		validator: validator,
-		template: template,
+		cfg: cfg,
 		auth: auth,
 		msgSender: msgSender,
 	})
@@ -77,7 +80,9 @@ func (s *Server) Login(
 			if errors.Is(err, auth.ErrInvalidCredentials) {
 				return nil, status.Error(codes.InvalidArgument, "invalid email or password")
 			}
-	
+			if errors.Is(err, auth.ErrUserNotConfirmed) {
+				return nil, status.Error(codes.InvalidArgument, "user not confirmed")
+			}
 			return nil, status.Error(codes.Internal, "failed to login")
 		}
 		return &authProto.LoginResponse{
@@ -110,7 +115,7 @@ func (s *Server) Register(
 				return
 			}
 			s.log.Debug("create verification code", slog.String("userId", uId), slog.String("code", vCode))
-			link := fmt.Sprintf("%s?verificationCode=%s", s.template.RgistrationLink, verification.ConvertForURL(vCode))
+			link := fmt.Sprintf("%s/%s", s.cfg.RgistrationLink, verification.ConvertForURL(vCode))
 			msgBody, err := tmpl.Register(link)
 			s.log.Debug("created message", slog.String("userId", uId), slog.String("msg", string(msgBody)))
 			if err != nil {
@@ -130,6 +135,52 @@ func (s *Server) Register(
 		}(uId)
 		return &authProto.RegisterResponse{
 			UserId: uId,
+		}, nil
+}
+
+func (s *Server) ResendMail(
+	ctx context.Context,
+	req *authProto.ResendRequest,
+	) (*authProto.ResendResponse, error) {
+		if !validator.ValideteByRegex(req.GetEmail(), s.validator.EmailValidate) {
+			return nil, status.Error(codes.InvalidArgument, "incorrect email")
+		}
+		userId, confirmed, err := s.auth.CheckEmailConfirm(ctx, req.GetEmail())
+		s.log.Debug("got info from email", slog.String("userId", userId), slog.Bool("confirmed", confirmed))
+		if err != nil {
+			if errors.Is(err, storage.ErrUserNotFound) {
+				return nil, status.Error(codes.NotFound, "user not found")
+			}
+			return nil, status.Error(codes.Internal, "failed to resend mail")
+		}
+		if confirmed {
+			return nil, status.Error(codes.AlreadyExists, "user already confirmed")
+		}
+
+		vCode, err := verification.GenerateVerificationCode(userId)
+		if err != nil {
+			return nil, status.Error(codes.Internal, "failed to resend mail")
+		}
+		s.log.Debug("create verification code", slog.String("userId", userId), slog.String("code", vCode))
+		link := fmt.Sprintf("%s/%s", s.cfg.RgistrationLink, verification.ConvertForURL(vCode))
+		msgBody, err := tmpl.Register(link)
+		s.log.Debug("created message", slog.String("userId", userId), slog.String("msg", string(msgBody)))
+		if err != nil {
+			s.log.Error("error while parsing template", slog.String("userId", userId), slog.String("error", err.Error()))
+			return nil, status.Error(codes.Internal, "failed to resend mail")
+		}
+		err = s.msgSender.SendMsg(ctx, &models.Message{
+			Subject: "Register msg",
+			EmailTo: req.GetEmail(),
+			Body: msgBody,
+		})
+		if err != nil {
+			s.log.Error("error while sending registration msg", slog.String("userId", userId), slog.String("error", err.Error()))
+			return nil, status.Error(codes.Internal, "failed to resend mail")
+		}
+		s.log.Info("sended mail", slog.String("email", req.GetEmail()))
+		return &authProto.ResendResponse{
+			Sended: true,
 		}, nil
 }
 
