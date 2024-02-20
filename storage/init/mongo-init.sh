@@ -11,7 +11,7 @@ db.createCollection("$MONGO_INITDB_COL_USER", {
    validator: {
       \$jsonSchema: {
          bsonType: "object",
-         required: [ "email", "passHash" ],
+         required: [ "email", "passHash", "confirmed" ],
          properties: {
             email: {
                bsonType: "string",
@@ -20,6 +20,10 @@ db.createCollection("$MONGO_INITDB_COL_USER", {
             passHash: {
                bsonType: "binData",
                description: "must be a byte array and is required"
+            },
+            confirmed: {
+               bsonType: "bool",
+               description: "must be a bool and is required"
             },
             admin: {
                bsonType: "bool",
