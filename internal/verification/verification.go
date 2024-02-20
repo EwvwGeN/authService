@@ -41,6 +41,9 @@ func GenerateVerificationCode(data string) (string, error) {
 }
 
 func DecryptVerificationCode(data string) (string, error) {
+	if len(key) == 0 {
+		return "", ErrKeySession
+	}
 	ciphertext, _ := base64.URLEncoding.DecodeString(data)
 
 	block, err := aes.NewCipher(key)

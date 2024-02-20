@@ -54,3 +54,9 @@ func Test_OneKeyForSession(t *testing.T) {
 
 	require.Equal(t, string(decodedUid), uuid)
 }
+
+func Test_KeySessionNotStarted(t *testing.T) {
+	code := "123213123"
+	_, err := DecryptVerificationCode(code)
+	require.ErrorIs(t, err, ErrKeySession)
+}
