@@ -25,13 +25,13 @@ func GenerateVerificationCode(data string) (string, error) {
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err.Error())
+		return "", ErrInternal
 	}
 
 	ciphertext := make([]byte, aes.BlockSize+len(plaintext))
 	iv := ciphertext[:aes.BlockSize]
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		panic(err)
+		return "", ErrInternal
 	}
 
 	stream := cipher.NewCFBEncrypter(block, iv)
@@ -41,15 +41,18 @@ func GenerateVerificationCode(data string) (string, error) {
 }
 
 func DecryptVerificationCode(data string) (string, error) {
+	if len(key) == 0 {
+		return "", ErrKeySession
+	}
 	ciphertext, _ := base64.URLEncoding.DecodeString(data)
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		panic(err)
+		return "", ErrInternal
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		panic("ciphertext too short")
+		return "", ErrCodeSize
 	}
 	iv := ciphertext[:aes.BlockSize]
 	ciphertext = ciphertext[aes.BlockSize:]
