@@ -7,6 +7,7 @@ require (
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/goombaio/namegenerator v0.0.0-20181006234301-989e774b106e
+	github.com/gorilla/mux v1.8.1
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
